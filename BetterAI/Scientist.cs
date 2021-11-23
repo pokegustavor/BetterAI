@@ -50,7 +50,7 @@ namespace BetterAI
                         __instance.PlayerOwner.StartingShip.photonView.RPC("ServerClickAtomize", PhotonTargets.All, new object[0]);
                     }
                 }
-                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 2 || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID_SC) return;
+                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 2 || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID_SC || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_FLUFFY_TWO) return;
                 foreach (PLUIScreen screen in __instance.PlayerOwner.StartingShip.MyScreenBase.AllScreens)
                 {
                     if (screen.name.ToLower().Contains("cloned") && (screen.name.ToLower().Contains("computer") || screen.name.ToLower().Contains("science") || (__instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_DESTROYER && screen.name.ToLower().Contains("status 6 (6)"))))

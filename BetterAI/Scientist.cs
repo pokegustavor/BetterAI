@@ -3,58 +3,43 @@ using UnityEngine;
 using System.Collections.Generic;
 namespace BetterAI
 {
-    class Scientist
+    public class Scientist
     {
         [HarmonyPatch(typeof(PLBot), "TickOptimizeStationAction")]
-        class ScienceScreen 
+        public class ScienceScreen 
         {
-            static void Postfix(PLBot __instance)
+            public static void Postfix(PLBot __instance)
             {
                 Vector3 down = new Vector3(0, 1, 0);
                 PLUIScreen sciencescreen = null;
-                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 2 || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID_SC) return;
-                foreach (PLUIScreen screen in __instance.PlayerOwner.StartingShip.MyScreenBase.AllScreens)
-                {
-                    if (screen.name.ToLower().Contains("cloned") && (screen.name.ToLower().Contains("computer") || screen.name.ToLower().Contains("science")))
-                    {
-                        sciencescreen = screen;
-                        break;
-                    }
-                }
-                if (sciencescreen != null)
-                {
-                    __instance.AI_TargetPos = sciencescreen.transform.position + sciencescreen.transform.forward - down;
-                    __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
-                    __instance.EnablePathing = true;
-                }
                 List<PLPawnItem_ResearchMaterial> myResearch = new List<PLPawnItem_ResearchMaterial>();
                 List<int> IDS = new List<int>();
-                foreach(PLMissionObjective objective in PLMissionObjective.AllMissionObjectives) 
+                foreach (PLMissionObjective objective in PLMissionObjective.AllMissionObjectives)
                 {
-                    if((objective as PLMissionObjective_PickupItem) != null && (objective as PLMissionObjective_PickupItem).ItemTypeToPickup == EPawnItemType.E_RESEARCH_MAT) 
+                    if ((objective as PLMissionObjective_PickupItem) != null && (objective as PLMissionObjective_PickupItem).ItemTypeToPickup == EPawnItemType.E_RESEARCH_MAT)
                     {
                         IDS.Add((objective as PLMissionObjective_PickupItem).SubItemType);
                     }
                 }
-                foreach(PLPawnItem item in __instance.PlayerOwner.MyInventory.AllItems) 
+                foreach (PLPawnItem item in __instance.PlayerOwner.MyInventory.AllItems)
                 {
-                    if(item as PLPawnItem_ResearchMaterial != null && !IDS.Contains((item as PLPawnItem_ResearchMaterial).SubType)) 
+                    if (item as PLPawnItem_ResearchMaterial != null && !IDS.Contains((item as PLPawnItem_ResearchMaterial).SubType))
                     {
                         myResearch.Add(item as PLPawnItem_ResearchMaterial);
                     }
                 }
                 GameObject atomizer = __instance.PlayerOwner.StartingShip.ResearchLockerCollider.gameObject;
-                if(myResearch.Count > 0 && atomizer != null && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI) 
+                if (myResearch.Count > 0 && atomizer != null && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI)
                 {
-                    if ((atomizer.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 4 * 4)
+                    if ((atomizer.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 16)
                     {
                         __instance.AI_TargetPos = atomizer.transform.position + atomizer.transform.forward - down;
                         __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
                         __instance.EnablePathing = true;
                     }
-                    else 
+                    else
                     {
-                        foreach (PLPawnItem_ResearchMaterial research in myResearch) 
+                        foreach (PLPawnItem_ResearchMaterial research in myResearch)
                         {
                             __instance.PlayerOwner.MyInventory.photonView.RPC("ServerItemSwap", PhotonTargets.All, new object[]
                             {
@@ -65,7 +50,22 @@ namespace BetterAI
                         __instance.PlayerOwner.StartingShip.photonView.RPC("ServerClickAtomize", PhotonTargets.All, new object[0]);
                     }
                 }
-
+                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 2 || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID_SC) return;
+                foreach (PLUIScreen screen in __instance.PlayerOwner.StartingShip.MyScreenBase.AllScreens)
+                {
+                    if (screen.name.ToLower().Contains("cloned") && (screen.name.ToLower().Contains("computer") || screen.name.ToLower().Contains("science") || (__instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_DESTROYER && screen.name.ToLower().Contains("status 6 (6)"))))
+                    {
+                        sciencescreen = screen;
+                        break;
+                    }
+                }
+                GameObject spawn = __instance.PlayerOwner.StartingShip.Spawners[__instance.PlayerOwner.GetClassID()] as GameObject;
+                if (sciencescreen != null && (__instance.AI_TargetPos == spawn.transform.position || __instance.AI_TargetPos == sciencescreen.transform.position + sciencescreen.transform.forward - down))
+                {
+                    __instance.AI_TargetPos = sciencescreen.transform.position + sciencescreen.transform.forward - down;
+                    __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
+                    __instance.EnablePathing = true;
+                }
             }
         }
 

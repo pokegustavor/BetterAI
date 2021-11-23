@@ -3,12 +3,13 @@ using UnityEngine;
 using System.Collections.Generic;
 namespace BetterAI
 {
-    internal class Engineer
+    public class Engineer
     {
         [HarmonyPatch(typeof(PLBot), "TickOptimizeStationAction")]
-        class EngineScreens 
+        public class EngineScreens 
         {
-            static void Postfix(PLBot __instance) 
+            public static Vector3[] scraps = new Vector3[5] { new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0), new Vector3(0, 0, 0) };
+            public static void Postfix(PLBot __instance) 
             {
                 Vector3 down = new Vector3(0, 1, 0);
                 PLUIScreen enginescreen = null;
@@ -30,19 +31,30 @@ namespace BetterAI
                         {
                             cargoObjectDisplay2 = __instance.PlayerOwner.StartingShip.GetCODDisplayingCargoAtID(plshipComponent, plshipComponent.SortID);
                         }
-                        if (cargoObjectDisplay2 != null && cargoObjectDisplay2.RootObj != null && cargoObjectDisplay2.DisplayedItem != null && !cargoObjectDisplay2.DisplayedItem.IsFlaggedForSelfDestruction())
+                        if (cargoObjectDisplay2 != null && cargoObjectDisplay2.RootObj != null && cargoObjectDisplay2.DisplayedItem != null && !cargoObjectDisplay2.DisplayedItem.IsFlaggedForSelfDestruction() && cargoObjectDisplay2.DisplayedItem.ActualSlotType == ESlotType.E_COMP_SCRAP)
                         {
                             float num34 = Vector3.SqrMagnitude(cargoObjectDisplay2.RootObj.transform.position - __instance.PlayerOwner.GetPawn().transform.position);
-                            if (num34 < num32)
+                            bool alreadyScrapping = false;
+                            for(int i = 0; i < 5; i++) 
+                            {
+                                if (i == __instance.PlayerOwner.GetClassID()) continue;
+                                if (scraps[i] == cargoObjectDisplay2.RootObj.transform.position) 
+                                {
+                                    alreadyScrapping = true;
+                                    break;
+                                }
+                            }
+                            if (num34 < num32 && !alreadyScrapping)
                             {
                                 cargo = cargoObjectDisplay2;
                                 num32 = num34;
+                                scraps[__instance.PlayerOwner.GetClassID()] = cargo.RootObj.transform.position;
                             }
                         }
                     }
-                    if (cargo != null && cargo.DisplayedItem != null && cargo.DisplayedItem.ActualSlotType == ESlotType.E_COMP_SCRAP) 
+                    if (cargo != null && cargo.DisplayedItem != null) 
                     {
-                        if (Vector3.SqrMagnitude(cargo.RootObj.transform.position - __instance.PlayerOwner.GetPawn().transform.position) > 4) 
+                        if (Vector3.SqrMagnitude(cargo.RootObj.transform.position - __instance.PlayerOwner.GetPawn().transform.position) > 6) 
                         {
                             __instance.AI_TargetPos = cargo.RootObj.transform.position;
                             __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
@@ -51,7 +63,7 @@ namespace BetterAI
                         }
                         else
                         {
-                            if (Random.Range(0,9) == 0)
+                            if (Random.value < 0.05f)
                             {
                                 __instance.PlayerOwner.ScrapProcessingAttemptsLeft--;
                             }
@@ -65,6 +77,10 @@ namespace BetterAI
                             }
                             return;
                         }
+                    }
+                    else if(scraps[__instance.PlayerOwner.GetClassID()].y != 0 && scraps[__instance.PlayerOwner.GetClassID()].z != 0 && scraps[__instance.PlayerOwner.GetClassID()].x != 0)
+                    {
+                        scraps[__instance.PlayerOwner.GetClassID()] = new Vector3(0,0,0);
                     }
                 }
                 if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4) return;
@@ -103,6 +119,47 @@ namespace BetterAI
                             __instance.EnablePathing = true;
                         }
                     }
+                }
+            }
+        }
+        [HarmonyPatch(typeof(PLBot), "Update")]
+        class ReactorSafety 
+        {
+            static bool shouldChange = false;
+            static void Postfix(PLBot __instance) 
+            {
+                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4 || Time.time - __instance.PlayerOwner.StartingShip.LastReactorCoolingToggleTime < 3f) return;
+                Vector3 down = new Vector3(0, 1, 0);
+                PLReactorSafetyPanel myPanel = null;
+                if (__instance.PlayerOwner.StartingShip.InteriorDynamic != null)
+                {
+                    myPanel = __instance.PlayerOwner.StartingShip.InteriorDynamic.GetComponentInChildren<PLReactorSafetyPanel>();
+                }
+                if (myPanel == null && __instance.PlayerOwner.StartingShip.InteriorStatic != null)
+                {
+                    myPanel = __instance.PlayerOwner.StartingShip.InteriorStatic.GetComponentInChildren<PLReactorSafetyPanel>();
+                }
+                if (myPanel == null) return;
+                if (!__instance.PlayerOwner.StartingShip.ReactorCoolingEnabled && (__instance.AI_TargetTLI != __instance.PlayerOwner.StartingShip.MyTLI || __instance.PlayerOwner.StartingShip.ReactorCoolantLevelPercent <= 0 || __instance.PlayerOwner.MyCurrentTLI != __instance.PlayerOwner.StartingShip.MyTLI)) 
+                {
+                    shouldChange = true;
+                }
+                else if(__instance.PlayerOwner.StartingShip.ReactorCoolingEnabled && __instance.PlayerOwner.StartingShip.ReactorCoolantLevelPercent > 0 && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI && __instance.AI_TargetTLI == __instance.PlayerOwner.StartingShip.MyTLI) 
+                {
+                    shouldChange = true;
+                }
+                if ((myPanel.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 16 && shouldChange)
+                {
+                    __instance.AI_TargetPos = myPanel.transform.position + myPanel.transform.forward - down;
+                    __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
+                    __instance.AI_TargetTLI = __instance.PlayerOwner.StartingShip.MyTLI;
+                    __instance.EnablePathing = true;
+                }
+                else if(shouldChange)
+                {
+                    __instance.PlayerOwner.StartingShip.ReactorCoolingEnabled = !__instance.PlayerOwner.StartingShip.ReactorCoolingEnabled;
+                    __instance.PlayerOwner.StartingShip.LastReactorCoolingToggleTime = Time.time;
+                    shouldChange = false;
                 }
             }
         }

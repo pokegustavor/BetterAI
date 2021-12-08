@@ -83,7 +83,7 @@ namespace BetterAI
                         scraps[__instance.PlayerOwner.GetClassID()] = new Vector3(0,0,0);
                     }
                 }
-                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4) return;
+                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4 || __instance.PlayerOwner.MyCurrentTLI != __instance.PlayerOwner.StartingShip.MyTLI) return;
                 foreach (PLUIScreen screen in __instance.PlayerOwner.StartingShip.MyScreenBase.AllScreens)
                 {
                     if (screen.name.ToLower().Contains("cloned") && (screen.name.ToLower().Contains("reactor") || screen.name.ToLower().Contains("engineering")))
@@ -148,14 +148,14 @@ namespace BetterAI
                 {
                     shouldChange = true;
                 }
-                if ((myPanel.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 16 && shouldChange)
+                if ((myPanel.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 16 && shouldChange && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI)
                 {
                     __instance.AI_TargetPos = myPanel.transform.position + myPanel.transform.forward - down;
                     __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
                     __instance.AI_TargetTLI = __instance.PlayerOwner.StartingShip.MyTLI;
                     __instance.EnablePathing = true;
                 }
-                else if(shouldChange)
+                else if(shouldChange && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI && (myPanel.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude < 16)
                 {
                     __instance.PlayerOwner.StartingShip.ReactorCoolingEnabled = !__instance.PlayerOwner.StartingShip.ReactorCoolingEnabled;
                     __instance.PlayerOwner.StartingShip.LastReactorCoolingToggleTime = Time.time;

@@ -14,7 +14,7 @@ namespace BetterAI
 
         public override string HarmonyIdentifier()
         {
-            return "Pokegustavo.ExoticComponents";
+            return "Pokegustavo.BetterAI";
         }
     }
 }

@@ -7,6 +7,8 @@ namespace BetterAI
 {
     internal class GeneralAI
     {
+        /*
+         * Bug Fixed
         [HarmonyPatch(typeof(PLBot), "TickFindInvaderAction")]
         class Intruders
         {
@@ -24,5 +26,6 @@ namespace BetterAI
                 }
             }
         }
+        */
     }
 }

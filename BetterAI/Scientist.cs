@@ -15,71 +15,74 @@ namespace BetterAI
                 PLUIScreen sciencescreen = null;
                 if (!__instance.PlayerOwner.StartingShip.InWarp)
                 {
-                    List<PLPawnItem_ResearchMaterial> myResearch = new List<PLPawnItem_ResearchMaterial>();
-                    List<int> IDS = new List<int>();
-                    foreach (PLMissionObjective objective in PLMissionObjective.AllMissionObjectives)
+                    if (__instance.PlayerOwner.StartingShip.ShipTypeID != EShipType.E_ABYSS_PLAYERSHIP)
                     {
-                        if ((objective as PLMissionObjective_PickupItem) != null && (objective as PLMissionObjective_PickupItem).ItemTypeToPickup == EPawnItemType.E_RESEARCH_MAT)
+                        List<PLPawnItem_ResearchMaterial> myResearch = new List<PLPawnItem_ResearchMaterial>();
+                        List<int> IDS = new List<int>();
+                        foreach (PLMissionObjective objective in PLMissionObjective.AllMissionObjectives)
                         {
-                            IDS.Add((objective as PLMissionObjective_PickupItem).SubItemType);
-                        }
-                    }
-                    foreach (PLPawnItem item in __instance.PlayerOwner.MyInventory.AllItems)
-                    {
-                        if (item as PLPawnItem_ResearchMaterial != null && !IDS.Contains((item as PLPawnItem_ResearchMaterial).SubType))
-                        {
-                            myResearch.Add(item as PLPawnItem_ResearchMaterial);
-                        }
-                    }
-                    GameObject atomizer = __instance.PlayerOwner.StartingShip.ResearchLockerCollider.gameObject;
-                    if (myResearch.Count > 0 && atomizer != null && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI && __instance.PlayerOwner.TeamID == 0)
-                    {
-                        if ((atomizer.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 16)
-                        {
-                            __instance.AI_TargetPos = atomizer.transform.position + atomizer.transform.forward - down;
-                            __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
-                            __instance.EnablePathing = true;
-                        }
-                        else
-                        {
-                            foreach (PLPawnItem_ResearchMaterial research in myResearch)
+                            if ((objective as PLMissionObjective_PickupItem) != null && (objective as PLMissionObjective_PickupItem).ItemTypeToPickup == EPawnItemType.E_RESEARCH_MAT)
                             {
-                                __instance.PlayerOwner.MyInventory.photonView.RPC("ServerItemSwap", PhotonTargets.All, new object[]
+                                IDS.Add((objective as PLMissionObjective_PickupItem).SubItemType);
+                            }
+                        }
+                        foreach (PLPawnItem item in __instance.PlayerOwner.MyInventory.AllItems)
+                        {
+                            if (item as PLPawnItem_ResearchMaterial != null && !IDS.Contains((item as PLPawnItem_ResearchMaterial).SubType))
+                            {
+                                myResearch.Add(item as PLPawnItem_ResearchMaterial);
+                            }
+                        }
+                        GameObject atomizer = __instance.PlayerOwner.StartingShip.ResearchLockerCollider.gameObject;
+                        if (myResearch.Count > 0 && atomizer != null && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI && __instance.PlayerOwner.TeamID == 0)
+                        {
+                            if ((atomizer.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 16)
+                            {
+                                __instance.AI_TargetPos = atomizer.transform.position + atomizer.transform.forward - down;
+                                __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
+                                __instance.EnablePathing = true;
+                            }
+                            else
+                            {
+                                foreach (PLPawnItem_ResearchMaterial research in myResearch)
                                 {
+                                    __instance.PlayerOwner.MyInventory.photonView.RPC("ServerItemSwap", PhotonTargets.All, new object[]
+                                    {
                             PLServer.Instance.ResearchLockerInventory.InventoryID,
                             research.NetID
+                                    });
+                                }
+                                __instance.PlayerOwner.StartingShip.photonView.RPC("ServerClickAtomize", PhotonTargets.All, new object[0]);
+                            }
+                        }
+                        if (__instance.PlayerOwner.GetPlayerID() == __instance.PlayerOwner.StartingShip.SensorDishControllerPlayerID && __instance.PlayerOwner.TeamID == 0)
+                        {
+                            PLShipInfo ship = __instance.PlayerOwner.StartingShip;
+                            Vector3 normalized = (ship.TractorBeamRotation * Vector3.forward).normalized;
+                            PLProbePickup pickup = null;
+                            foreach (int ID in PLEncounterManager.Instance.GetCPEI().MyPersistantData.ProbePickupPersistantData.Keys)
+                            {
+                                if (PLGameStatic.Instance.GetProbePickupObjectAtID(ID).VisibleObject.GetActive() == false) continue;
+                                if (pickup == null)
+                                {
+                                    pickup = PLGameStatic.Instance.GetProbePickupObjectAtID(ID);
+                                }
+                                else if (Vector3.SqrMagnitude(PLGameStatic.Instance.GetProbePickupObjectAtID(ID).VisibleObject.transform.position - ship.GetSensorDishPosition()) < Vector3.SqrMagnitude(pickup.VisibleObject.transform.position - ship.GetSensorDishPosition()))
+                                {
+                                    pickup = PLGameStatic.Instance.GetProbePickupObjectAtID(ID);
+                                }
+                            }
+                            if (pickup != null && Vector3.Magnitude(pickup.VisibleObject.transform.position - ship.GetSensorDishPosition()) < 250 && !ship.InWarp)
+                            {
+                                ship.SendFireProbeMsg(__instance.PlayerOwner.GetPlayerID(), ship.GetSensorDishPosition(), PLGlobal.SafeLookRotation(((pickup.VisibleObject.transform.position - ship.GetSensorDishPosition()).normalized).normalized));
+                            }
+                            if (ship.SensorDishCurrentSecondaryTarget_Scrap != null)
+                            {
+                                ship.photonView.RPC("RequestScrapCollectFromSensorDish", PhotonTargets.MasterClient, new object[]
+                                {
+                            ship.SensorDishCurrentSecondaryTarget_Scrap.EncounterNetID
                                 });
                             }
-                            __instance.PlayerOwner.StartingShip.photonView.RPC("ServerClickAtomize", PhotonTargets.All, new object[0]);
-                        }
-                    }
-                    if (__instance.PlayerOwner.GetPlayerID() == __instance.PlayerOwner.StartingShip.SensorDishControllerPlayerID && __instance.PlayerOwner.TeamID == 0)
-                    {
-                        PLShipInfo ship = __instance.PlayerOwner.StartingShip;
-                        Vector3 normalized = (ship.TractorBeamRotation * Vector3.forward).normalized;
-                        PLProbePickup pickup = null;
-                        foreach (int ID in PLEncounterManager.Instance.GetCPEI().MyPersistantData.ProbePickupPersistantData.Keys)
-                        {
-                            if (PLGameStatic.Instance.GetProbePickupObjectAtID(ID).VisibleObject.GetActive() == false) continue;
-                            if (pickup == null)
-                            {
-                                pickup = PLGameStatic.Instance.GetProbePickupObjectAtID(ID);
-                            }
-                            else if (Vector3.SqrMagnitude(PLGameStatic.Instance.GetProbePickupObjectAtID(ID).VisibleObject.transform.position - ship.GetSensorDishPosition()) < Vector3.SqrMagnitude(pickup.VisibleObject.transform.position - ship.GetSensorDishPosition()))
-                            {
-                                pickup = PLGameStatic.Instance.GetProbePickupObjectAtID(ID);
-                            }
-                        }
-                        if (pickup != null && Vector3.Magnitude(pickup.VisibleObject.transform.position - ship.GetSensorDishPosition()) < 250 && !ship.InWarp)
-                        {
-                            ship.SendFireProbeMsg(__instance.PlayerOwner.GetPlayerID(), ship.GetSensorDishPosition(), PLGlobal.SafeLookRotation(((pickup.VisibleObject.transform.position - ship.GetSensorDishPosition()).normalized).normalized));
-                        }
-                        if (ship.SensorDishCurrentSecondaryTarget_Scrap != null)
-                        {
-                            ship.photonView.RPC("RequestScrapCollectFromSensorDish", PhotonTargets.MasterClient, new object[]
-                            {
-                            ship.SensorDishCurrentSecondaryTarget_Scrap.EncounterNetID
-                            });
                         }
                     }
                 }

@@ -128,7 +128,7 @@ namespace BetterAI
             static bool shouldChange = false;
             static void Postfix(PLBot __instance) 
             {
-                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4 || Time.time - __instance.PlayerOwner.StartingShip.LastReactorCoolingToggleTime < 3f) return;
+                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4 || Time.time - __instance.PlayerOwner.StartingShip.LastReactorCoolingToggleTime < 3f || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_ABYSS_PLAYERSHIP) return;
                 Vector3 down = new Vector3(0, 1, 0);
                 PLReactorSafetyPanel myPanel = null;
                 if (__instance.PlayerOwner.StartingShip.InteriorDynamic != null)

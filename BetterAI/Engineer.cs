@@ -163,5 +163,17 @@ namespace BetterAI
                 }
             }
         }
+        [HarmonyPatch(typeof(PLEngineerReactorScreen), "OptimizeForBot_OnLeave")]
+        class DisablePowerReductionOnLeave 
+        {
+            static bool Prefix(PLEngineerReactorScreen __instance) 
+            {
+                if (__instance.MyScreenHubBase.OptionalShipInfo.Reactor_OCActive)
+                {
+                    __instance.MyScreenHubBase.OptionalShipInfo.photonView.RPC("SetReactorOCStatus", PhotonTargets.All, new object[] { !__instance.MyScreenHubBase.OptionalShipInfo.Reactor_OCActive });
+                }
+                return false;
+            }
+        }
     }
 }

@@ -13,7 +13,8 @@ namespace BetterAI
             {
                 Vector3 down = new Vector3(0, 1, 0);
                 PLUIScreen enginescreen = null;
-                if((__instance.PlayerOwner.Talents[54] > 0 || __instance.PlayerOwner.Talents[55] > 0) && __instance.PlayerOwner.ScrapProcessingAttemptsLeft > 0 && __instance.PlayerOwner.StartingShip != null && __instance.PlayerOwner.StartingShip.HostileShips.Count == 0 && __instance.PlayerOwner.StartingShip.CoreInstability <= 0.001 && __instance.PlayerOwner.GetPawn() != null) 
+                //Process scrap if: Has talent, has attemps remmaining, no enemies are nearby and reactor is not unstable 
+                if(Settings.General_ProcessScrap && (__instance.PlayerOwner.Talents[54] > 0 || __instance.PlayerOwner.Talents[55] > 0) && __instance.PlayerOwner.ScrapProcessingAttemptsLeft > 0 && __instance.PlayerOwner.StartingShip != null && __instance.PlayerOwner.StartingShip.HostileShips.Count == 0 && __instance.PlayerOwner.StartingShip.CoreInstability <= 0.001 && __instance.PlayerOwner.GetPawn() != null) 
                 {
                     CargoObjectDisplay cargo = null;
                     List<PLShipComponent> componentsOfType = __instance.PlayerOwner.StartingShip.MyStats.GetComponentsOfType(ESlotType.E_COMP_CARGO, true);
@@ -83,7 +84,8 @@ namespace BetterAI
                         scraps[__instance.PlayerOwner.GetClassID()] = new Vector3(0,0,0);
                     }
                 }
-                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4 || __instance.PlayerOwner.MyCurrentTLI != __instance.PlayerOwner.StartingShip.MyTLI) return;
+                //Go to better work station
+                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4 || __instance.PlayerOwner.MyCurrentTLI != __instance.PlayerOwner.StartingShip.MyTLI || !Settings.General_MoveStation) return;
                 foreach (PLUIScreen screen in __instance.PlayerOwner.StartingShip.MyScreenBase.AllScreens)
                 {
                     if (screen.name.ToLower().Contains("cloned") && (screen.name.ToLower().Contains("reactor") || screen.name.ToLower().Contains("engineering")))
@@ -98,6 +100,7 @@ namespace BetterAI
                     __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
                     __instance.EnablePathing = true;
                 }
+                //Walk to a warp screen when needed
                 if (__instance.PlayerOwner.ActiveSubPriority != null) 
                 {
                     EAIPriorityListDisplayed typeData = (EAIPriorityListDisplayed)__instance.PlayerOwner.ActiveSubPriority.TypeData;
@@ -128,7 +131,8 @@ namespace BetterAI
             static bool shouldChange = false;
             static void Postfix(PLBot __instance) 
             {
-                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4 || Time.time - __instance.PlayerOwner.StartingShip.LastReactorCoolingToggleTime < 3f || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_ABYSS_PLAYERSHIP) return;
+                //Control the ships core safety
+                if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 4 || Time.time - __instance.PlayerOwner.StartingShip.LastReactorCoolingToggleTime < 3f || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_ABYSS_PLAYERSHIP || !Settings.Engineer_CoreSafety) return;
                 Vector3 down = new Vector3(0, 1, 0);
                 PLReactorSafetyPanel myPanel = null;
                 if (__instance.PlayerOwner.StartingShip.InteriorDynamic != null)
@@ -168,6 +172,7 @@ namespace BetterAI
         {
             static bool Prefix(PLEngineerReactorScreen __instance) 
             {
+                //Disable overclock when leaving station
                 if (__instance.MyScreenHubBase.OptionalShipInfo.Reactor_OCActive)
                 {
                     __instance.MyScreenHubBase.OptionalShipInfo.photonView.RPC("SetReactorOCStatus", PhotonTargets.All, new object[] { !__instance.MyScreenHubBase.OptionalShipInfo.Reactor_OCActive });

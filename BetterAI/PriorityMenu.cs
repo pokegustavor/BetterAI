@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace BetterAI
 {
+    /*
     internal class PriorityMenu
     {
         [HarmonyPatch(typeof(AIPriority), "GetTootipTextForPriority")]
@@ -59,4 +60,5 @@ namespace BetterAI
             }
         }
     }
+    */
 }

@@ -17,44 +17,49 @@ namespace BetterAI
                 {
                     if (__instance.PlayerOwner.StartingShip.ShipTypeID != EShipType.E_ABYSS_PLAYERSHIP)
                     {
-                        List<PLPawnItem_ResearchMaterial> myResearch = new List<PLPawnItem_ResearchMaterial>();
-                        List<int> IDS = new List<int>();
-                        foreach (PLMissionObjective objective in PLMissionObjective.AllMissionObjectives)
+                        //Atomize all research that is not required by a mission
+                        if (Settings.Scientist_AtomizeResearch)
                         {
-                            if ((objective as PLMissionObjective_PickupItem) != null && (objective as PLMissionObjective_PickupItem).ItemTypeToPickup == EPawnItemType.E_RESEARCH_MAT)
+                            List<PLPawnItem_ResearchMaterial> myResearch = new List<PLPawnItem_ResearchMaterial>();
+                            List<int> IDS = new List<int>();
+                            foreach (PLMissionObjective objective in PLMissionObjective.AllMissionObjectives)
                             {
-                                IDS.Add((objective as PLMissionObjective_PickupItem).SubItemType);
-                            }
-                        }
-                        foreach (PLPawnItem item in __instance.PlayerOwner.MyInventory.AllItems)
-                        {
-                            if (item as PLPawnItem_ResearchMaterial != null && !IDS.Contains((item as PLPawnItem_ResearchMaterial).SubType))
-                            {
-                                myResearch.Add(item as PLPawnItem_ResearchMaterial);
-                            }
-                        }
-                        GameObject atomizer = __instance.PlayerOwner.StartingShip.ResearchLockerCollider.gameObject;
-                        if (myResearch.Count > 0 && atomizer != null && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI && __instance.PlayerOwner.TeamID == 0)
-                        {
-                            if ((atomizer.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 16)
-                            {
-                                __instance.AI_TargetPos = atomizer.transform.position + atomizer.transform.forward - down;
-                                __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
-                                __instance.EnablePathing = true;
-                            }
-                            else
-                            {
-                                foreach (PLPawnItem_ResearchMaterial research in myResearch)
+                                if ((objective as PLMissionObjective_PickupItem) != null && (objective as PLMissionObjective_PickupItem).ItemTypeToPickup == EPawnItemType.E_RESEARCH_MAT)
                                 {
-                                    __instance.PlayerOwner.MyInventory.photonView.RPC("ServerItemSwap", PhotonTargets.All, new object[]
+                                    IDS.Add((objective as PLMissionObjective_PickupItem).SubItemType);
+                                }
+                            }
+                            foreach (PLPawnItem item in __instance.PlayerOwner.MyInventory.AllItems)
+                            {
+                                if (item as PLPawnItem_ResearchMaterial != null && !IDS.Contains((item as PLPawnItem_ResearchMaterial).SubType))
+                                {
+                                    myResearch.Add(item as PLPawnItem_ResearchMaterial);
+                                }
+                            }
+                            GameObject atomizer = __instance.PlayerOwner.StartingShip.ResearchLockerCollider.gameObject;
+                            if (myResearch.Count > 0 && atomizer != null && __instance.PlayerOwner.MyCurrentTLI == __instance.PlayerOwner.StartingShip.MyTLI && __instance.PlayerOwner.TeamID == 0)
+                            {
+                                if ((atomizer.transform.position - __instance.PlayerOwner.GetPawn().transform.position).sqrMagnitude > 16)
+                                {
+                                    __instance.AI_TargetPos = atomizer.transform.position + atomizer.transform.forward - down;
+                                    __instance.AI_TargetPos_Raw = __instance.AI_TargetPos;
+                                    __instance.EnablePathing = true;
+                                }
+                                else
+                                {
+                                    foreach (PLPawnItem_ResearchMaterial research in myResearch)
                                     {
+                                        __instance.PlayerOwner.MyInventory.photonView.RPC("ServerItemSwap", PhotonTargets.All, new object[]
+                                        {
                             PLServer.Instance.ResearchLockerInventory.InventoryID,
                             research.NetID
-                                    });
+                                        });
+                                    }
+                                    __instance.PlayerOwner.StartingShip.photonView.RPC("ServerClickAtomize", PhotonTargets.All, new object[0]);
                                 }
-                                __instance.PlayerOwner.StartingShip.photonView.RPC("ServerClickAtomize", PhotonTargets.All, new object[0]);
                             }
                         }
+                        //Fire probe at space research and collect scrap
                         if (__instance.PlayerOwner.GetPlayerID() == __instance.PlayerOwner.StartingShip.SensorDishControllerPlayerID && __instance.PlayerOwner.TeamID == 0)
                         {
                             PLShipInfo ship = __instance.PlayerOwner.StartingShip;
@@ -86,8 +91,9 @@ namespace BetterAI
                         }
                     }
                 }
+                //Go to better work station
                 if (__instance.PlayerOwner.StartingShip == null || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.GetClassID() != 2
-                    || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID_SC || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_FLUFFY_TWO || __instance.PlayerOwner.MyCurrentTLI != __instance.PlayerOwner.StartingShip.MyTLI) return;
+                    || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_INTREPID_SC || __instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_FLUFFY_TWO || __instance.PlayerOwner.MyCurrentTLI != __instance.PlayerOwner.StartingShip.MyTLI || !Settings.General_MoveStation) return;
                 foreach (PLUIScreen screen in __instance.PlayerOwner.StartingShip.MyScreenBase.AllScreens)
                 {
                     if (((screen.name.ToLower().Contains("cloned") && __instance.PlayerOwner.StartingShip.ShipTypeID != EShipType.E_STARGAZER) || (__instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_STARGAZER && !screen.name.ToLower().Contains("cloned"))) && (screen.name.ToLower().Contains("computer") || screen.name.ToLower().Contains("science") || (__instance.PlayerOwner.StartingShip.ShipTypeID == EShipType.E_DESTROYER && screen.name.ToLower().Contains("status 6 (6)"))))
@@ -112,7 +118,7 @@ namespace BetterAI
             static void Postfix(PLBot __instance)
             {
                 float maxDistance = 13 * 13;
-                if (__instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.MyInventory == null) return;
+                if (!Settings.General_CollectPlanetItems || __instance.PlayerOwner.GetPawn() == null || __instance.PlayerOwner.MyInventory == null) return;
                 PLPawnItem_Scanner scanner = null;
                 using (List<PLPawnItem>.Enumerator enumerator = __instance.PlayerOwner.MyInventory.AllItems.GetEnumerator())
                 {
